@@ -699,7 +699,8 @@ def get_scalar_field_minimum_in_mesh(real_field, mesh=None):
     return minimum_element_id, minimum_element_value
 
 
-def define_grid_field_on_mesh(mesh, field_name, number_of_cells, number_of_components=1, value_type=float):
+def define_grid_field_on_mesh(mesh, field_name, number_of_cells, number_of_components=1, value_type=float,
+                              element_basis_type=Elementbasis.FUNCTION_TYPE_LINEAR_LAGRANGE):
     """
     Define a grid field over all elements of a mesh. This is an embedded structured mesh of sub-cells over
     the element space. Supports cube, square or line shape. Supports only trilinear grid cells.
@@ -711,10 +712,15 @@ def define_grid_field_on_mesh(mesh, field_name, number_of_cells, number_of_compo
     than the mesh dimension are supplied, the last number of cells is used for remaining directions.
     :param number_of_components: Number of components of grid field.
     :param value_type: float or int.
+    :param element_basis_type: Elementbasis.FUNCTION_TYPE_LINEAR_LAGRANGE or Element.FUNCTION_TYPE_CONSTANT.
+    Constant basis is only supported for 0 cells in all directions i.e. per element constant.
     """
     number_count = len(number_of_cells)
     assert number_count > 0
-    assert all((number >= 1) for number in number_of_cells)
+    assert (((element_basis_type == Elementbasis.FUNCTION_TYPE_LINEAR_LAGRANGE) and
+             all((number >= 1) for number in number_of_cells)) or
+            ((element_basis_type == Elementbasis.FUNCTION_TYPE_CONSTANT) and
+             all((number == 0) for number in number_of_cells)))
     assert number_of_components >= 1
     assert value_type in (float, int)
     mesh_dimension = mesh.getDimension()
@@ -726,7 +732,8 @@ def define_grid_field_on_mesh(mesh, field_name, number_of_cells, number_of_compo
         number_in_xi_strings.append(f" #xi{d + 1}={number_in_xi[d]}")
     number_in_xi_string = ",".join(number_in_xi_strings)
     value_type_string = "integer" if (value_type is int) else "real"
-    basis_string = "*".join(["l.Lagrange"] * mesh_dimension)
+    basis_type_string = "l.Lagrange" if (element_basis_type == Elementbasis.FUNCTION_TYPE_LINEAR_LAGRANGE) else "constant"
+    basis_string = "*".join([basis_type_string] * mesh_dimension)
     components_string = ""
     for c in range(number_of_components):
         components_string += f" {c + 1}. {basis_string}, no modify, grid based.\n" + number_in_xi_string + "\n"
